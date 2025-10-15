@@ -1,24 +1,13 @@
 name: Sync Upstream
 
 on:
-  workflow_call:
-    inputs:
-      sync:
-        description: 'Sync with upstream repository'
-        required: false
-        default: true
-        type: boolean
   workflow_dispatch:
     inputs:
       sync:
         description: 'Sync with upstream repository'
-        required: false
+        required: true
         default: true
         type: boolean
-
-
-permissions:
-  contents: write
 
 jobs:
   sync:
@@ -39,7 +28,6 @@ jobs:
         run: |
           git remote | grep -q upstream || git remote add upstream https://github.com/docusealco/docuseal.git
           git fetch upstream
-          git fetch upstream --tags
 
       - name: Merge upstream changes
         run: |
@@ -57,12 +45,11 @@ jobs:
         run: |
           if [ "${{ github.event.inputs.sync }}" = "true" ]; then
             git push origin master
-            git push --tags
           fi
 
       # Slack notifications for both success and failure
       - name: Slack Notification
-        if: always() && !env.ACT
+        if: always()
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
