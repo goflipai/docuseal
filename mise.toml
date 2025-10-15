@@ -1,4 +1,2 @@
 [tools]
-act = "latest"
-gh = "latest"
 terraform = "1.12"
