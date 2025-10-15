@@ -25,8 +25,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-        with:
-          fetch-tags: true    # Fetch all tags (for v4+ of actions/checkout)
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v5.0.0
@@ -47,6 +45,7 @@ jobs:
             echo "Using overridden tag: ${{ github.event.inputs.tag_override }}"
             echo "tag=${{ github.event.inputs.tag_override }}" >> $GITHUB_OUTPUT
           else
+            git fetch --tags
             echo "Available tags:"
             git tag -l
             tag=$(git tag -l | sort -V | tail -n 1)
