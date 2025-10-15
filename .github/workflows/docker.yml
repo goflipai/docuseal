@@ -1,6 +1,18 @@
 name: Build Docker Image
 
 on:
+  workflow_call:
+    inputs:
+      sync:
+        description: 'Build and push Docker image'
+        required: true
+        default: true
+        type: boolean
+      tag_override:
+        description: 'Override image tag (optional)'
+        required: false
+        default: ''
+        type: string
   workflow_dispatch:
     inputs:
       sync:
