@@ -3,22 +3,12 @@ name: Build Docker Image
 on:
   workflow_call:
     inputs:
-      sync:
-        description: 'Build and push Docker image'
-        required: false
-        default: true
-        type: boolean
       tag_override:
         description: 'Override image tag (optional)'
         required: false
         type: string
   workflow_dispatch:
     inputs:
-      sync:
-        description: 'Build and push Docker image'
-        required: false
-        default: true
-        type: boolean
       tag_override:
         description: 'Override image tag (optional)'
         required: false
@@ -44,7 +34,7 @@ jobs:
           aws-access-key-id: ${{ secrets.ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.SECRET_ACCESS_KEY }}
           # Uncomment this if running locally with act
-          # aws-session-token: ${{ secrets.SESSION_TOKEN }}
+          aws-session-token: ${{ secrets.SESSION_TOKEN }}
           aws-region: us-gov-west-1
 
       - name: Login to Amazon ECR
@@ -57,6 +47,8 @@ jobs:
             echo "Using overridden tag: ${{ github.event.inputs.tag_override }}"
             echo "tag=${{ github.event.inputs.tag_override }}" >> $GITHUB_OUTPUT
           else
+            echo "Available tags:"
+            git tag -l
             tag=$(git tag -l | sort -V | tail -n 1)
             echo "Using latest git tag: $tag"
             echo "tag=$tag" >> $GITHUB_OUTPUT

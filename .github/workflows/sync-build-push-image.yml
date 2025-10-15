@@ -10,6 +10,8 @@ jobs:
   sync:
     uses: ./.github/workflows/sync-upstream.yml
     secrets: inherit
+    with:
+      sync: true
 
   build_and_push:
     needs: sync
