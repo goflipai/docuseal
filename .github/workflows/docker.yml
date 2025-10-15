@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      ecr_repository: oci://358252705848.dkr.ecr.us-gov-west-1.amazonaws.com/docuseal
+      ecr_repository: 358252705848.dkr.ecr.us-gov-west-1.amazonaws.com/docuseal
 
     steps:
       - name: Checkout code
