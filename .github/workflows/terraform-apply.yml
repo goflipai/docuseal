@@ -1,0 +1,82 @@
+name: Auto apply terraform
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apply:
+    runs-on: codebuild-github-runner-docuseal-${{ github.run_id }}-${{ github.run_attempt }}
+    name: Auto apply terraform
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      CLUSTER_NAME: dev-cluster
+      ecr_repository: 358252705848.dkr.ecr.us-gov-west-1.amazonaws.com/docuseal
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.SESSION_TOKEN }}
+          aws-region: us-gov-west-1
+
+      - name: Install AWS CLI
+        if: env.ACT
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install
+
+      - name: Write AWS credentials to flip profile
+        # Add this line if using session tokens
+        # echo "aws_session_token=${{ secrets.SESSION_TOKEN }}" >> ~/.aws/credentials
+        run: |
+          mkdir -p ~/.aws
+          echo "[flip]" > ~/.aws/credentials
+          echo "aws_access_key_id=${{ secrets.ACCESS_KEY_ID }}" >> ~/.aws/credentials
+          echo "aws_secret_access_key=${{ secrets.SECRET_ACCESS_KEY }}" >> ~/.aws/credentials
+          echo "aws_session_token=${{ secrets.SESSION_TOKEN }}" >> ~/.aws/credentials
+          echo "[profile flip]" > ~/.aws/config
+          echo "region=us-gov-west-1" >> ~/.aws/config
+
+      - name: Update kubeconfig for EKS
+        run: |
+          aws eks update-kubeconfig --region us-gov-west-1 --name "$CLUSTER_NAME" --profile flip
+
+      - name: Add SSH Private Key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_KEY }}
+
+      - name: Add GitHub to known_hosts
+        run: ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12
+
+      - name: Terraform Init
+        run: terraform -chdir=infra/app init
+
+      - name: Terraform Apply
+        run: terraform -chdir=infra/app apply -auto-approve
+
+      # Slack notifications for both success and failure
+      - name: Slack Notification
+        if: always() && !env.ACT
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: repo,message,commit,workflow
+          channel: '#github-deploys'
+          text: |
+            ${{ job.status == 'success' && format('Docuseal deployed to EKS successfully :white_check_mark: (Image: {0})', env.IMAGE_TAG) || 'Docuseal deployment to EKS failed :x:' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_GITHUB_CHANNEL_WEBHOOK_URL }}
