@@ -5,7 +5,7 @@ on:
     inputs:
       sync:
         description: 'Build and push Docker image'
-        required: true
+        required: false
         default: true
         type: boolean
       tag_override:
@@ -17,7 +17,7 @@ on:
     inputs:
       sync:
         description: 'Build and push Docker image'
-        required: true
+        required: false
         default: true
         type: boolean
       tag_override:
