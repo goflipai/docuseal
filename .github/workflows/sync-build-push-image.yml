@@ -1,0 +1,28 @@
+name: Sync upstream and Build Docker Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      sync:
+        description: 'Sync with upstream repository and build/push Docker image'
+        required: true
+        default: true
+        type: boolean
+      tag_override:
+        description: 'Override image tag (optional)'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    uses: ./.github/workflows/sync-upstream.yml
+
+  build_and_push:
+    needs: sync
+    uses: ./.github/workflows/docker.yml
+    with:
+      tag_override: ${{ github.event.inputs.tag_override }}

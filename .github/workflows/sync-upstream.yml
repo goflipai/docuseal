@@ -32,6 +32,7 @@ jobs:
         run: |
           git remote | grep -q upstream || git remote add upstream https://github.com/docusealco/docuseal.git
           git fetch upstream
+          git fetch upstream --tags
 
       - name: Merge upstream changes
         run: |
@@ -49,6 +50,7 @@ jobs:
         run: |
           if [ "${{ github.event.inputs.sync }}" = "true" ]; then
             git push origin master
+            git push --tags
           fi
 
       # Slack notifications for both success and failure
