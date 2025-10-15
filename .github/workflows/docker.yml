@@ -46,8 +46,6 @@ jobs:
             echo "tag=${{ github.event.inputs.tag_override }}" >> $GITHUB_OUTPUT
           else
             git fetch --tags
-            echo "Available tags:"
-            git tag -l
             tag=$(git tag -l | sort -V | tail -n 1)
             echo "Using latest git tag: $tag"
             echo "tag=$tag" >> $GITHUB_OUTPUT
