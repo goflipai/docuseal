@@ -1,0 +1,17 @@
+# This file configures `gh act`.
+# See README.md for more information about running GitHub Actions Locally.
+# ************************************************************
+#
+# Explanation of options below:
+# -P            | Provides a mapping of GitHub 'runs-on' labels to docker images
+# --secret-file | A manually-created secret file with secrets required by the workflow
+# container-options:
+# -v            | Mounts a volume from the host into the container
+# --privileged  | Allows the container to run containers
+# -b            | Skip copying the entire repository into the container (especially painful in WSL2)
+# --rm          | Clean up after itself
+
+--secret-file ./gh.secrets
+--container-options "-v /home/$USER/.kube/config:/home/runner/.kube/config"
+--container-options " --privileged -b "
+--rm
