@@ -9,6 +9,10 @@ on:
         default: true
         type: boolean
 
+
+permissions:
+  contents: write
+
 jobs:
   sync:
     runs-on: ubuntu-latest
