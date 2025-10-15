@@ -41,3 +41,4 @@ dump.rdb
 .terraform
 *plan*
 gh.secrets
+creds.json
