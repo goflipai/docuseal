@@ -40,3 +40,4 @@ dump.rdb
 
 .terraform
 *plan*
+gh.secrets
