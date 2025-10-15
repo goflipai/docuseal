@@ -52,10 +52,11 @@ jobs:
           if [ -n "${{ github.event.inputs.tag_override }}" ]; then
             echo "Using overridden tag: ${{ github.event.inputs.tag_override }}"
             echo "tag=${{ github.event.inputs.tag_override }}" >> $GITHUB_OUTPUT
-            exit 0
+          else
+            tag=$(git tag -l | sort -V | tail -n 1)
+            echo "Using latest git tag: $tag"
+            echo "tag=$tag" >> $GITHUB_OUTPUT
           fi
-          tag=$(git tag -l | sort -V | tail -n 1)
-          echo "tag=$tag" >> $GITHUB_OUTPUT
 
       - name: Build and push image
         run: |
