@@ -37,3 +37,6 @@ yarn-debug.log*
 /docuseal
 /ee
 dump.rdb
+
+.terraform
+*plan*

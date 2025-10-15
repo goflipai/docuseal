@@ -1,0 +1,61 @@
+name: Sync Upstream
+
+on:
+  workflow_dispatch:
+    inputs:
+      sync:
+        description: 'Sync with upstream repository'
+        required: true
+        default: true
+        type: boolean
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Set up Git
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+      - name: Add upstream and fetch
+        run: |
+          git remote | grep -q upstream || git remote add upstream https://github.com/docusealco/docuseal.git
+          git fetch upstream
+
+      - name: Merge upstream changes
+        run: |
+          git checkout master
+          git merge upstream/master
+
+      - name: Check for merge conflicts
+        run: |
+          if git ls-files -u | grep -q .; then
+            echo "Merge conflicts detected!"
+            exit 1
+          fi
+
+      - name: Push changes
+        run: |
+          if [ "${{ github.event.inputs.sync }}" = "true" ]; then
+            git push origin master
+          fi
+
+      # Slack notifications for both success and failure
+      - name: Slack Notification
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: repo,message,commit,workflow
+          channel: '#github-deploys'
+          text: |
+            ${{ job.status == 'success' && 'Docuseal synced with upstream successfully :white_check_mark:' || 'Docuseal sync with upstream failed :x:' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_GITHUB_CHANNEL_WEBHOOK_URL }}
