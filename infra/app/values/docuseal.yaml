@@ -1,0 +1,62 @@
+image:
+  imageName: ${repo_name}
+  repository: ${repo_url}/
+  tag: "${image_tag}"
+
+env_vars:
+  - name: HOST
+    value: ${host_name}
+  - name: FORCE_SSL
+    value: "true"
+  - name: PORT
+    value: 3000
+  - name: S3_ATTACHMENTS_BUCKET
+    value: dev-docuseal
+
+secrets:
+  textSecrets:
+    SECRET_KEY_BASE: ${secret_base_key_ref}
+  customSecrets:
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: dev-flip-docuseal-user
+          key: DATABASE_URL
+    - name: AWS_ACCESS_KEY_ID
+      valueFrom:
+        secretKeyRef:
+          name: dev-docuseal-s3-creds
+          key: AWS_ACCESS_KEY_ID
+    - name: AWS_SECRET_ACCESS_KEY
+      valueFrom:
+        secretKeyRef:
+          name: dev-docuseal-s3-creds
+          key: AWS_SECRET_ACCESS_KEY
+
+serviceAccount:
+  create: true
+  name: ${service_account_name}
+  roleArn: ${role_arn}
+  automount: true
+
+metricsEndpoint:
+  enabled: false
+
+service:
+  port: 3000
+  targetPort: 3000
+  serviceName: docuseal
+  altPort:
+    port: 80
+    targetPort: 3000
+
+ingress:
+  enabled: true
+  secGroupId: ${ingressSecGrpId}
+  # This is set by the ter
+
+readinessProbe:
+  httpGet:
+    path: /up
+    port: 3000
+    initialDelaySeconds: 30

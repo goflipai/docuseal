@@ -32,7 +32,7 @@ jobs:
           aws-access-key-id: ${{ secrets.ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.SECRET_ACCESS_KEY }}
           # Uncomment this if running locally with act
-          aws-session-token: ${{ secrets.SESSION_TOKEN }}
+          # aws-session-token: ${{ secrets.SESSION_TOKEN }}
           aws-region: us-gov-west-1
 
       - name: Login to Amazon ECR
