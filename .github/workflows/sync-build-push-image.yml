@@ -9,9 +9,9 @@ permissions:
 jobs:
   sync:
     uses: ./.github/workflows/sync-upstream.yml
+    secrets: inherit
 
   build_and_push:
     needs: sync
     uses: ./.github/workflows/docker.yml
-    with:
-      tag_override: ${{ github.event.inputs.tag_override }}
+    secrets: inherit
