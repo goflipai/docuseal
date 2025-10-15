@@ -1,11 +1,18 @@
 name: Sync Upstream
 
 on:
+  workflow_call:
+    inputs:
+      sync:
+        description: 'Sync with upstream repository'
+        required: false
+        default: true
+        type: boolean
   workflow_dispatch:
     inputs:
       sync:
         description: 'Sync with upstream repository'
-        required: true
+        required: false
         default: true
         type: boolean
 
