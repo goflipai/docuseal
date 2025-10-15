@@ -9,18 +9,18 @@ on:
         type: string
   workflow_dispatch:
     inputs:
-      tag_override:
-        description: 'Override image tag (optional)'
-        required: false
-        default: ''
-        type: string
+      sync:
+        description: 'Build and push Docker image'
+        required: true
+        default: true
+        type: boolean
 
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      ecr_repository: 358252705848.dkr.ecr.us-gov-west-1.amazonaws.com/docuseal
+      ecr_repository: oci://358252705848.dkr.ecr.us-gov-west-1.amazonaws.com/docuseal
 
     steps:
       - name: Checkout code
@@ -31,34 +31,29 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.SECRET_ACCESS_KEY }}
-          # Uncomment this if running locally with act
-          aws-session-token: ${{ secrets.SESSION_TOKEN }}
           aws-region: us-gov-west-1
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Get latest tag
-        id: latest-tag
+      - name: Get timestamp
+        id: current-time
+        uses: gerred/actions/current-time@master
+
+      - name: Format tag
+        id: set-tag
         run: |
-          if [ -n "${{ github.event.inputs.tag_override }}" ]; then
-            echo "Using overridden tag: ${{ github.event.inputs.tag_override }}"
-            echo "tag=${{ github.event.inputs.tag_override }}" >> $GITHUB_OUTPUT
-          else
-            git fetch --tags
-            tag=$(git tag -l | sort -V | tail -n 1)
-            echo "Using latest git tag: $tag"
-            echo "tag=$tag" >> $GITHUB_OUTPUT
-          fi
+          TAG=$(echo "${{ steps.current-time.outputs.time }}" | sed 's/[:\.]/-/g')
+          echo "image_tag=$TAG" >> $GITHUB_OUTPUT
 
       - name: Build and push image
         run: |
-          docker build -t ${{ env.ecr_repository }}:${{ steps.latest-tag.outputs.tag }} .
-          docker push ${{ env.ecr_repository }}:${{ steps.latest-tag.outputs.tag }}
+          docker build -t ${{ env.ecr_repository }}:${{ steps.set-tag.outputs.image_tag }} .
+          docker push ${{ env.ecr_repository }}:${{ steps.set-tag.outputs.image_tag }}
 
       # Slack notifications for both success and failure
       - name: Slack Notification
-        if: always() && !env.ACT
+        if: always()
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
