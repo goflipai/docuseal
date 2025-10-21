@@ -4,6 +4,8 @@ module "ecr" {
 
   repository_name = local.repo_name
 
+  repository_image_tag_mutability = "MUTABLE"
+
   repository_lifecycle_policy = jsonencode({
     rules = [
       {
