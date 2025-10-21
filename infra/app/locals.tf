@@ -10,9 +10,9 @@ locals {
 
   docuseal_domain = "docuseal.${local.env}.goflip.ai"
 
-  repo_url                  = "${local.account_id}.dkr.ecr.${local.region}.amazonaws.com"
-  chart                     = "flip-app-chart-${local.env}"
-  docuseal_user_secret_name = "${local.env}-flip-docuseal-user"
+  repo_url            = "${local.account_id}.dkr.ecr.${local.region}.amazonaws.com"
+  chart               = "flip-app-chart-${local.env}"
+  db_user_secret_name = "${local.env}-docuseal-db-user"
 
   cluster_name           = data.terraform_remote_state.eks.outputs.cluster_name
   docuseal_svc_acct_name = "flip-docuseal-sa"
