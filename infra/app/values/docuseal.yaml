@@ -16,12 +16,11 @@ env_vars:
 secrets:
   textSecrets:
     SECRET_KEY_BASE: ${secret_base_key_ref}
+  dbLogins:
+    db_user:
+      env_prefix: DATABASE
+      secretRef: ${db_user_ref}
   customSecrets:
-    - name: DATABASE_URL
-      valueFrom:
-        secretKeyRef:
-          name: dev-flip-docuseal-user
-          key: DATABASE_URL
     - name: AWS_ACCESS_KEY_ID
       valueFrom:
         secretKeyRef:

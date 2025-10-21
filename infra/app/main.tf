@@ -13,28 +13,6 @@
   7. Apply the terraform configuration to deploy the Docuseal application
 */
 
-
-/*
-  TODO:
-    remove all docuseal related resources from this terraform state
-    import them into the new terraform state in the docuseal repo app module
-
-    remove the resources from this file
-*/
-
-
-/*
-  imported using the following command
-    terraform import kubectl_manifest.docuseal_api_token_secret external-secrets.io/v1beta1//ExternalSecret//dev-docuseal-api-token//apps
-*/
-resource "kubectl_manifest" "docuseal_db_url_secret" {
-  yaml_body = templatefile("${path.module}/manifests/docuseal_db_url_secret.yaml", {
-    namespace  = "apps"
-    secretName = local.docuseal_user_secret_name
-    storeName  = "flip-secretstore"
-  })
-}
-
 resource "kubectl_manifest" "docuseal_iam_creds_secret" {
   yaml_body = templatefile("${path.module}/manifests/docuseal_iam_creds_secret.yaml", {
     namespace  = "apps"
@@ -91,6 +69,7 @@ module "docuseal" {
         repo_name            = local.repo_name
         image_tag            = local.latest_image
         secret_base_key_ref  = "${local.env}-flip-docuseal-cipher-key"
+        db_user_ref          = local.db_user_secret_name
         service_account_name = local.docuseal_svc_acct_name
         role_arn             = module.backend_pod_identity.iam_role_arn
         host_name            = local.docuseal_domain
