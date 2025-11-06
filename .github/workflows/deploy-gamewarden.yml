@@ -1,0 +1,142 @@
+name: Deploy to Production (GameWarden)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_production:
+        description: "Type 'PRODUCTION' to confirm deployment"
+        required: true
+        type: string
+      version:
+        description: "Semantic version (e.g., 1.2.3). Leave empty to auto-detect from git tag"
+        required: false
+        type: string
+
+permissions: write-all
+
+jobs:
+  validate_confirmation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate production confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirm_production }}" != "PRODUCTION" ]; then
+            echo "❌ Production deployment not confirmed. You must type 'PRODUCTION' to proceed."
+            exit 1
+          fi
+          echo "✅ Production deployment confirmed"
+
+  build_and_push:
+    needs: validate_confirmation
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.set-tag.outputs.image_tag }}
+      version: ${{ steps.set-tag.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # Fetch all history for tags
+
+      - name: Determine version
+        id: version
+        run: |
+          # Check if version was provided via input
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          # Try to get version from git tag
+          elif git describe --tags --exact-match HEAD 2>/dev/null; then
+            VERSION=$(git describe --tags --exact-match HEAD | sed 's/^v//')
+          else
+            # Fallback to latest git tag
+            git fetch --tags
+            LATEST_TAG=$(git tag -l | sort -V | tail -n 1)
+            if [ -n "$LATEST_TAG" ]; then
+              VERSION=$(echo "$LATEST_TAG" | sed 's/^v//')
+            else
+              echo "❌ No version provided and no git tags found"
+              exit 1
+            fi
+          fi
+
+          # Validate semantic versioning format (MAJOR.MINOR.PATCH)
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9-]+(\.[0-9]+)?)?$'; then
+            echo "❌ Invalid semantic version format: $VERSION"
+            echo "Expected format: MAJOR.MINOR.PATCH (e.g., 1.2.3) or MAJOR.MINOR.PATCH-prerelease"
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "✅ Using version: $VERSION"
+
+      - name: Set image tag
+        id: set-tag
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          # Create tag in format: v1.2.3 (maintaining current pattern)
+          IMAGE_TAG="v${VERSION}"
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "✅ Image will be tagged as: $IMAGE_TAG"
+
+      - name: Docker login to Harbor
+        run: |
+          # Harbor requires using the password via stdin for security
+          echo "${{ secrets.HARBOR_PASSWORD }}" | docker login -u "${{ secrets.HARBOR_USERNAME }}" --password-stdin registry.secondfront.com
+
+      - name: Build and push image to Harbor
+        env:
+          IMAGE: registry.secondfront.com/flip-technology/docuseal:${{ steps.set-tag.outputs.image_tag }}
+        run: |
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+
+  deployment_summary:
+    needs: [validate_confirmation, build_and_push]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Create deployment summary
+        id: summary
+        run: |
+          echo "## 🚀 Production Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: Production (GameWarden)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: \`${{ needs.build_and_push.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag**: \`${{ needs.build_and_push.outputs.image_tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build & Push**: ${{ needs.build_and_push.result == 'success' && '✅ Passed' || '❌ Failed' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.build_and_push.result }}" == "success" ]; then
+            echo "### ✅ Production deployment completed successfully!" >> $GITHUB_STEP_SUMMARY
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "### ❌ Production deployment failed. Please check the logs above." >> $GITHUB_STEP_SUMMARY
+            echo "status=failure" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Slack Notification
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ steps.summary.outputs.status == 'success' && 'success' || 'failure' }}
+          fields: repo,message,commit,workflow
+          channel: "#github-deploys"
+          text: |
+            🚀 *Production Deployment Summary*
+
+            *Environment:* Production (GameWarden)
+
+            *Version:* `${{ needs.build_and_push.outputs.version }}`
+
+            *Image Tag:* `${{ needs.build_and_push.outputs.image_tag }}`
+
+            *Commit:* `${{ github.sha }}`
+
+            *Triggered by:* ${{ github.actor }}
+
+            *Build & Push:* ${{ needs.build_and_push.result == 'success' && ':white_check_mark: Completed' || ':x: Failed' }}
+
+            ${{ steps.summary.outputs.status == 'success' && ':white_check_mark: Production deployment completed successfully!' || ':x: Production deployment failed. Please check the logs.' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_GITHUB_CHANNEL_WEBHOOK_URL }}
