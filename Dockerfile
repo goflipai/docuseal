@@ -35,9 +35,9 @@ WORKDIR /build
 
 RUN apk add --no-cache build-base cmake wget git \
     zlib-dev libjpeg-turbo-dev libwebp-dev zstd-dev xz-dev && \
-    wget https://download.osgeo.org/libtiff/tiff-4.7.1.tar.gz && \
-    tar -xzf tiff-4.7.1.tar.gz && \
-    cd tiff-4.7.1 && \
+    wget https://download.osgeo.org/libtiff/tiff-4.8.0.tar.gz && \
+    tar -xzf tiff-4.8.0.tar.gz && \
+    cd tiff-4.8.0 && \
     mkdir _build && \
     cd _build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr && \
