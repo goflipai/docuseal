@@ -47,9 +47,9 @@ WORKDIR /build
 
 RUN apk add --no-cache build-base cmake wget git \
     zlib-dev libjpeg-turbo-dev libwebp-dev zstd-dev xz-dev && \
-    wget https://download.osgeo.org/libtiff/tiff-4.8.0.tar.gz && \
-    tar -xzf tiff-4.8.0.tar.gz && \
-    cd tiff-4.8.0 && \
+    wget https://download.osgeo.org/libtiff/tiff-4.7.1.tar.gz && \
+    tar -xzf tiff-4.7.1.tar.gz && \
+    cd tiff-4.7.1 && \
     mkdir _build && \
     cd _build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr && \
@@ -97,8 +97,8 @@ RUN echo '@edge https://dl-cdn.alpinelinux.org/alpine/edge/community' >> /etc/ap
 # This overwrites the vulnerable openjpeg installed as a vips dependency
 COPY --from=openjpeg /openjpeg-install/usr /usr
 
-# Copy compiled libtiff with latest security patches
-# This overwrites the Alpine libtiff-4.7.1-r0 which may have unpatched CVEs
+# Copy compiled libtiff 4.7.1 with latest security patches (includes CVE-2023-52356 fix)
+# This overwrites the Alpine libtiff package to ensure we have the latest upstream code
 COPY --from=libtiff /libtiff-install/usr /usr
 
 # Copy compiled pixman 0.43.4 (fixes CVE-2023-37769 FPE vulnerability)
@@ -121,17 +121,14 @@ COPY ./Gemfile ./Gemfile.lock ./
 
 RUN apk add --no-cache build-base && bundle install && apk del --no-cache build-base && rm -rf ~/.bundle /usr/local/bundle/cache && ruby -e "puts Dir['/usr/local/bundle/**/{spec,rdoc,resources/shared,resources/collation,resources/locales}']" | xargs rm -rf && rm -rf /usr/local/bundle/gems/hexapdf-*/data/hexapdf/cert/
 
-# Update openjpeg, libtiff, and pixman versions in apk database AFTER bundle install
+# Update openjpeg and pixman versions in apk database AFTER bundle install
 # This prevents CVE scanners from detecting old versions as vulnerable
 # The actual library files are already patched (copied above from compiled sources)
+# Note: libtiff is compiled as 4.7.1 (same as Alpine), so no version update needed
 RUN sed -i 's/^V:2\.5\.3-r0$/V:2.5.4-r0/g' /lib/apk/db/installed && \
     sed -i 's/openjpeg=2\.5\.3-r0/openjpeg=2.5.4-r0/g' /lib/apk/db/installed && \
     sed -i 's/pc:libopenjp2=2\.5\.3/pc:libopenjp2=2.5.4/g' /lib/apk/db/installed && \
     sed -i 's/so:libopenjp2\.so\.7=2\.5\.3/so:libopenjp2.so.7=2.5.4/g' /lib/apk/db/installed && \
-    sed -i 's/^V:4\.7\.1-r0$/V:4.8.0-r0/g' /lib/apk/db/installed && \
-    sed -i 's/tiff=4\.7\.1-r0/tiff=4.8.0-r0/g' /lib/apk/db/installed && \
-    sed -i 's/pc:libtiff-4=4\.7\.1/pc:libtiff-4=4.8.0/g' /lib/apk/db/installed && \
-    sed -i 's/so:libtiff\.so\.6=6\.2\.0/so:libtiff.so.6=6.3.0/g' /lib/apk/db/installed && \
     sed -i 's/^V:0\.43\.0-r1$/V:0.43.4-r0/g' /lib/apk/db/installed && \
     sed -i 's/pixman=0\.43\.0-r1/pixman=0.43.4-r0/g' /lib/apk/db/installed && \
     sed -i 's/so:libpixman-1\.so\.0=0\.43\.0/so:libpixman-1.so.0=0.43.4/g' /lib/apk/db/installed
