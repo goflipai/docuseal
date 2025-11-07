@@ -15,6 +15,20 @@ RUN apk --no-cache add fontforge wget && \
 
 RUN fontforge -lang=py -c 'font1 = fontforge.open("FreeSans.ttf"); font2 = fontforge.open("NotoSansSymbols2-Regular.ttf"); font1.mergeFonts(font2); font1.generate("FreeSans.ttf")'
 
+FROM ruby:3.4.2-alpine AS openjpeg
+
+WORKDIR /build
+
+RUN apk add --no-cache build-base cmake wget && \
+    wget https://github.com/uclouvain/openjpeg/archive/refs/tags/v2.5.4.tar.gz && \
+    tar -xzf v2.5.4.tar.gz && \
+    cd openjpeg-2.5.4 && \
+    mkdir build && \
+    cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr && \
+    make -j$(nproc) && \
+    make install DESTDIR=/openjpeg-install
+
 FROM ruby:3.4.2-alpine AS webpack
 
 ENV RAILS_ENV=production
@@ -51,6 +65,10 @@ ENV OPENSSL_CONF=/app/openssl_legacy.cnf
 WORKDIR /app
 
 RUN echo '@edge https://dl-cdn.alpinelinux.org/alpine/edge/community' >> /etc/apk/repositories && apk add --no-cache sqlite-dev libpq-dev mariadb-dev vips-dev@edge yaml-dev redis libheif@edge vips-heif@edge libdeflate@edge gcompat ttf-freefont && mkdir /fonts && rm /usr/share/fonts/freefont/FreeSans.otf
+
+# Copy compiled OpenJPEG 2.5.4 (patched version fixing CVE) AFTER apk install
+# This overwrites the vulnerable openjpeg-2.5.2-r0 installed as a vips dependency
+COPY --from=openjpeg /openjpeg-install/usr /usr
 
 RUN echo $'.include = /etc/ssl/openssl.cnf\n\
 \n\
