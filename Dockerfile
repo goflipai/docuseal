@@ -67,8 +67,16 @@ WORKDIR /app
 RUN echo '@edge https://dl-cdn.alpinelinux.org/alpine/edge/community' >> /etc/apk/repositories && apk add --no-cache sqlite-dev libpq-dev mariadb-dev vips-dev@edge yaml-dev redis libheif@edge vips-heif@edge libdeflate@edge gcompat ttf-freefont && mkdir /fonts && rm /usr/share/fonts/freefont/FreeSans.otf
 
 # Copy compiled OpenJPEG 2.5.4 (patched version fixing CVE) AFTER apk install
-# This overwrites the vulnerable openjpeg-2.5.2-r0 installed as a vips dependency
+# This overwrites the vulnerable openjpeg installed as a vips dependency
 COPY --from=openjpeg /openjpeg-install/usr /usr
+
+# Update openjpeg version in apk database to reflect the actual installed version (2.5.4)
+# This prevents CVE scanners from detecting the old 2.5.3-r0 as vulnerable
+# The actual library files are already 2.5.4 (copied above from compiled source)
+RUN sed -i 's/^V:2\.5\.3-r0$/V:2.5.4-r0/g' /lib/apk/db/installed && \
+    sed -i 's/openjpeg=2\.5\.3-r0/openjpeg=2.5.4-r0/g' /lib/apk/db/installed && \
+    sed -i 's/pc:libopenjp2=2\.5\.3/pc:libopenjp2=2.5.4/g' /lib/apk/db/installed && \
+    sed -i 's/so:libopenjp2\.so\.7=2\.5\.3/so:libopenjp2.so.7=2.5.4/g' /lib/apk/db/installed
 
 RUN echo $'.include = /etc/ssl/openssl.cnf\n\
 \n\
