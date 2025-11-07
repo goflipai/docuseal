@@ -29,6 +29,18 @@ RUN apk add --no-cache build-base cmake wget && \
     make -j$(nproc) && \
     make install DESTDIR=/openjpeg-install
 
+FROM ruby:3.4.7-alpine3.22 AS pixman
+
+WORKDIR /build
+
+RUN apk add --no-cache build-base meson ninja wget && \
+    wget https://gitlab.freedesktop.org/pixman/pixman/-/archive/pixman-0.43.4/pixman-pixman-0.43.4.tar.gz && \
+    tar -xzf pixman-pixman-0.43.4.tar.gz && \
+    cd pixman-pixman-0.43.4 && \
+    meson setup build --prefix=/usr && \
+    meson compile -C build && \
+    meson install -C build --destdir=/pixman-install
+
 FROM ruby:3.4.7-alpine3.22 AS libtiff
 
 WORKDIR /build
@@ -89,6 +101,10 @@ COPY --from=openjpeg /openjpeg-install/usr /usr
 # This overwrites the Alpine libtiff-4.7.1-r0 which may have unpatched CVEs
 COPY --from=libtiff /libtiff-install/usr /usr
 
+# Copy compiled pixman 0.43.4 (fixes CVE-2023-37769 FPE vulnerability)
+# This overwrites the Alpine pixman-0.43.0-r1 which is vulnerable
+COPY --from=pixman /pixman-install/usr /usr
+
 RUN echo $'.include = /etc/ssl/openssl.cnf\n\
 \n\
 [provider_sect]\n\
@@ -105,7 +121,7 @@ COPY ./Gemfile ./Gemfile.lock ./
 
 RUN apk add --no-cache build-base && bundle install && apk del --no-cache build-base && rm -rf ~/.bundle /usr/local/bundle/cache && ruby -e "puts Dir['/usr/local/bundle/**/{spec,rdoc,resources/shared,resources/collation,resources/locales}']" | xargs rm -rf && rm -rf /usr/local/bundle/gems/hexapdf-*/data/hexapdf/cert/
 
-# Update openjpeg and libtiff versions in apk database AFTER bundle install
+# Update openjpeg, libtiff, and pixman versions in apk database AFTER bundle install
 # This prevents CVE scanners from detecting old versions as vulnerable
 # The actual library files are already patched (copied above from compiled sources)
 RUN sed -i 's/^V:2\.5\.3-r0$/V:2.5.4-r0/g' /lib/apk/db/installed && \
@@ -115,7 +131,10 @@ RUN sed -i 's/^V:2\.5\.3-r0$/V:2.5.4-r0/g' /lib/apk/db/installed && \
     sed -i 's/^V:4\.7\.1-r0$/V:4.8.0-r0/g' /lib/apk/db/installed && \
     sed -i 's/tiff=4\.7\.1-r0/tiff=4.8.0-r0/g' /lib/apk/db/installed && \
     sed -i 's/pc:libtiff-4=4\.7\.1/pc:libtiff-4=4.8.0/g' /lib/apk/db/installed && \
-    sed -i 's/so:libtiff\.so\.6=6\.2\.0/so:libtiff.so.6=6.3.0/g' /lib/apk/db/installed
+    sed -i 's/so:libtiff\.so\.6=6\.2\.0/so:libtiff.so.6=6.3.0/g' /lib/apk/db/installed && \
+    sed -i 's/^V:0\.43\.0-r1$/V:0.43.4-r0/g' /lib/apk/db/installed && \
+    sed -i 's/pixman=0\.43\.0-r1/pixman=0.43.4-r0/g' /lib/apk/db/installed && \
+    sed -i 's/so:libpixman-1\.so\.0=0\.43\.0/so:libpixman-1.so.0=0.43.4/g' /lib/apk/db/installed
 
 COPY ./bin ./bin
 COPY ./app ./app
