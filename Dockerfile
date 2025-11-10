@@ -93,8 +93,14 @@ WORKDIR /app
 
 RUN echo '@edge https://dl-cdn.alpinelinux.org/alpine/edge/community' >> /etc/apk/repositories && apk add --no-cache sqlite-dev libpq-dev mariadb-dev vips-dev@edge yaml-dev redis libheif@edge vips-heif@edge libdeflate@edge gcompat ttf-freefont && mkdir /fonts && rm /usr/share/fonts/freefont/FreeSans.otf
 
-# Copy compiled OpenJPEG 2.5.4 (patched version fixing CVE) AFTER apk install
-# This overwrites the vulnerable openjpeg installed as a vips dependency
+# Update REXML to fix CVE-2025-58767 (GHSA-c2f4-jgmc-q2r5)
+# Ruby 3.4.7 ships with REXML 3.4.0 (vulnerable), update to 3.4.4+ (fixed)
+# CVE-2025-58767: DoS condition when parsing malformed XML file
+RUN gem install rexml -v 3.4.4 --no-document
+
+# Copy compiled OpenJPEG 2.5.4 (latest available version)
+# NOTE: CVE-2023-39329 is unfixed in all OpenJPEG versions including 2.5.4
+# See CVE-EXCEPTIONS.md and SECURITY-REPORT.md for risk acceptance and mitigations
 COPY --from=openjpeg /openjpeg-install/usr /usr
 
 # Copy compiled libtiff 4.7.1 with latest security patches
