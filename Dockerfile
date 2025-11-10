@@ -127,7 +127,15 @@ activate = 1' >> /app/openssl_legacy.cnf
 
 COPY ./Gemfile ./Gemfile.lock ./
 
-RUN apk add --no-cache build-base && bundle install && apk del --no-cache build-base && rm -rf ~/.bundle /usr/local/bundle/cache && ruby -e "puts Dir['/usr/local/bundle/**/{spec,rdoc,resources/shared,resources/collation,resources/locales}']" | xargs rm -rf && rm -rf /usr/local/bundle/gems/hexapdf-*/data/hexapdf/cert/
+RUN apk add --no-cache build-base && bundle install && \
+    # Remove build dependencies including vips-dev (which pulls Python via glib-dev)
+    # Install vips runtime-only package (no Python dependency)
+    apk del --no-cache build-base vips-dev sqlite-dev libpq-dev mariadb-dev yaml-dev && \
+    apk add --no-cache vips@edge sqlite-libs libpq mariadb-connector-c yaml && \
+    # Clean up bundle cache
+    rm -rf ~/.bundle /usr/local/bundle/cache && \
+    ruby -e "puts Dir['/usr/local/bundle/**/{spec,rdoc,resources/shared,resources/collation,resources/locales}']" | xargs rm -rf && \
+    rm -rf /usr/local/bundle/gems/hexapdf-*/data/hexapdf/cert/
 
 # Update openjpeg and pixman versions in apk database AFTER bundle install
 # This prevents CVE scanners from detecting old versions as vulnerable
