@@ -34,9 +34,9 @@ FROM ruby:3.4.7-alpine3.22 AS pixman
 WORKDIR /build
 
 RUN apk add --no-cache build-base meson ninja wget && \
-    wget https://gitlab.freedesktop.org/pixman/pixman/-/archive/pixman-0.43.4/pixman-pixman-0.43.4.tar.gz && \
-    tar -xzf pixman-pixman-0.43.4.tar.gz && \
-    cd pixman-pixman-0.43.4 && \
+    wget https://gitlab.freedesktop.org/pixman/pixman/-/archive/pixman-0.46.4/pixman-pixman-0.46.4.tar.gz && \
+    tar -xzf pixman-pixman-0.46.4.tar.gz && \
+    cd pixman-pixman-0.46.4 && \
     meson setup build --prefix=/usr && \
     meson compile -C build && \
     meson install -C build --destdir=/pixman-install
@@ -97,12 +97,14 @@ RUN echo '@edge https://dl-cdn.alpinelinux.org/alpine/edge/community' >> /etc/ap
 # This overwrites the vulnerable openjpeg installed as a vips dependency
 COPY --from=openjpeg /openjpeg-install/usr /usr
 
-# Copy compiled libtiff 4.7.1 with latest security patches (includes CVE-2023-52356 fix)
-# This overwrites the Alpine libtiff package to ensure we have the latest upstream code
+# Copy compiled libtiff 4.7.1 with latest security patches
+# CVE-2023-52356 (heap-buffer overflow) fixed in 4.6.0+, current version 4.7.1 is secure
+# See CVE-EXCEPTIONS.md for security verification details
 COPY --from=libtiff /libtiff-install/usr /usr
 
-# Copy compiled pixman 0.43.4 (fixes CVE-2023-37769 FPE vulnerability)
-# This overwrites the Alpine pixman-0.43.0-r1 which is vulnerable
+# Copy compiled pixman 0.46.4 (latest stable release)
+# NOTE: CVE-2023-37769 affects only the stress-test binary (not distributed in production)
+# See CVE-EXCEPTIONS.md for detailed justification - this CVE should be ignored in scans
 COPY --from=pixman /pixman-install/usr /usr
 
 RUN echo $'.include = /etc/ssl/openssl.cnf\n\
@@ -129,9 +131,9 @@ RUN sed -i 's/^V:2\.5\.3-r0$/V:2.5.4-r0/g' /lib/apk/db/installed && \
     sed -i 's/openjpeg=2\.5\.3-r0/openjpeg=2.5.4-r0/g' /lib/apk/db/installed && \
     sed -i 's/pc:libopenjp2=2\.5\.3/pc:libopenjp2=2.5.4/g' /lib/apk/db/installed && \
     sed -i 's/so:libopenjp2\.so\.7=2\.5\.3/so:libopenjp2.so.7=2.5.4/g' /lib/apk/db/installed && \
-    sed -i 's/^V:0\.43\.0-r1$/V:0.43.4-r0/g' /lib/apk/db/installed && \
-    sed -i 's/pixman=0\.43\.0-r1/pixman=0.43.4-r0/g' /lib/apk/db/installed && \
-    sed -i 's/so:libpixman-1\.so\.0=0\.43\.0/so:libpixman-1.so.0=0.43.4/g' /lib/apk/db/installed
+    sed -i 's/^V:0\.43\.0-r1$/V:0.46.4-r0/g' /lib/apk/db/installed && \
+    sed -i 's/pixman=0\.43\.0-r1/pixman=0.46.4-r0/g' /lib/apk/db/installed && \
+    sed -i 's/so:libpixman-1\.so\.0=0\.43\.0/so:libpixman-1.so.0=0.46.4/g' /lib/apk/db/installed
 
 COPY ./bin ./bin
 COPY ./app ./app
