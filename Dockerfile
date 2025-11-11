@@ -92,6 +92,7 @@ ENV OPENSSL_CONF=/app/openssl_legacy.cnf
 WORKDIR /app
 
 RUN echo '@edge https://dl-cdn.alpinelinux.org/alpine/edge/community' >> /etc/apk/repositories && apk add --no-cache sqlite-dev libpq-dev mariadb-dev vips-dev@edge yaml-dev redis libheif@edge vips-heif@edge libdeflate@edge gcompat ttf-freefont && mkdir /fonts && rm /usr/share/fonts/freefont/FreeSans.otf
+RUN addgroup -S docuseal && adduser -G docuseal -D -h /app -s /bin/sh docuseal
 
 # Update REXML to fix CVE-2025-58767 (GHSA-c2f4-jgmc-q2r5)
 # Ruby 3.4.7 ships with REXML 3.4.0 (vulnerable), update to 3.4.4+ (fixed)
@@ -169,6 +170,8 @@ COPY --from=webpack /app/public/packs ./public/packs
 RUN ln -s /fonts /app/public/fonts
 RUN bundle exec bootsnap precompile --gemfile app/ lib/
 
+RUN mkdir -p /data/docuseal && chown -R docuseal:docuseal /app /fonts /data/docuseal
+USER docuseal
 WORKDIR /data/docuseal
 ENV WORKDIR=/data/docuseal
 
