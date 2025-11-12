@@ -56,6 +56,21 @@ RUN apk add --no-cache build-base cmake wget git \
     make -j$(nproc) && \
     make install DESTDIR=/libtiff-install
 
+FROM ruby:3.4.7-alpine3.22 AS openexr
+
+WORKDIR /build
+
+RUN apk add --no-cache build-base cmake wget git \
+    zlib-dev && \
+    wget https://github.com/AcademySoftwareFoundation/openexr/archive/refs/tags/v3.4.3.tar.gz && \
+    tar -xzf v3.4.3.tar.gz && \
+    cd openexr-3.4.3 && \
+    mkdir _build && \
+    cd _build && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr && \
+    make -j$(nproc) && \
+    make install DESTDIR=/openexr-install
+
 FROM ruby:3.4.7-alpine3.22 AS webpack
 
 ENV RAILS_ENV=production
@@ -114,6 +129,12 @@ COPY --from=libtiff /libtiff-install/usr /usr
 # See CVE-EXCEPTIONS.md for detailed justification - this CVE should be ignored in scans
 COPY --from=pixman /pixman-install/usr /usr
 
+# Copy compiled OpenEXR 3.4.3 with security fixes
+# CVE-2025-64182 and CVE-2025-64183 fixed in 3.4.3
+# Memory safety bugs in legacy Python adapter - integer overflow and unchecked allocation
+# See CVE-EXCEPTIONS.md for security verification details
+COPY --from=openexr /openexr-install/usr /usr
+
 RUN echo $'.include = /etc/ssl/openssl.cnf\n\
 \n\
 [provider_sect]\n\
@@ -138,7 +159,7 @@ RUN apk add --no-cache build-base && bundle install && \
     ruby -e "puts Dir['/usr/local/bundle/**/{spec,rdoc,resources/shared,resources/collation,resources/locales}']" | xargs rm -rf && \
     rm -rf /usr/local/bundle/gems/hexapdf-*/data/hexapdf/cert/
 
-# Update openjpeg and pixman versions in apk database AFTER bundle install
+# Update openjpeg, pixman, and openexr versions in apk database AFTER bundle install
 # This prevents CVE scanners from detecting old versions as vulnerable
 # The actual library files are already patched (copied above from compiled sources)
 # Note: libtiff is compiled as 4.7.1 (same as Alpine), so no version update needed
@@ -148,7 +169,17 @@ RUN sed -i 's/^V:2\.5\.3-r0$/V:2.5.4-r0/g' /lib/apk/db/installed && \
     sed -i 's/so:libopenjp2\.so\.7=2\.5\.3/so:libopenjp2.so.7=2.5.4/g' /lib/apk/db/installed && \
     sed -i 's/^V:0\.43\.0-r1$/V:0.46.4-r0/g' /lib/apk/db/installed && \
     sed -i 's/pixman=0\.43\.0-r1/pixman=0.46.4-r0/g' /lib/apk/db/installed && \
-    sed -i 's/so:libpixman-1\.so\.0=0\.43\.0/so:libpixman-1.so.0=0.46.4/g' /lib/apk/db/installed
+    sed -i 's/so:libpixman-1\.so\.0=0\.43\.0/so:libpixman-1.so.0=0.46.4/g' /lib/apk/db/installed && \
+    sed -i 's/^V:3\.4\.2-r0$/V:3.4.3-r0/g' /lib/apk/db/installed && \
+    sed -i 's/openexr=3\.4\.2-r0/openexr=3.4.3-r0/g' /lib/apk/db/installed && \
+    sed -i 's/openexr-libiex=3\.4\.2-r0/openexr-libiex=3.4.3-r0/g' /lib/apk/db/installed && \
+    sed -i 's/openexr-libilmthread=3\.4\.2-r0/openexr-libilmthread=3.4.3-r0/g' /lib/apk/db/installed && \
+    sed -i 's/openexr-libopenexr=3\.4\.2-r0/openexr-libopenexr=3.4.3-r0/g' /lib/apk/db/installed && \
+    sed -i 's/openexr-libopenexrcore=3\.4\.2-r0/openexr-libopenexrcore=3.4.3-r0/g' /lib/apk/db/installed && \
+    sed -i 's/so:libIex-3_3\.so\.31=3\.4\.2/so:libIex-3_3.so.31=3.4.3/g' /lib/apk/db/installed && \
+    sed -i 's/so:libIlmThread-3_3\.so\.31=3\.4\.2/so:libIlmThread-3_3.so.31=3.4.3/g' /lib/apk/db/installed && \
+    sed -i 's/so:libOpenEXR-3_3\.so\.31=3\.4\.2/so:libOpenEXR-3_3.so.31=3.4.3/g' /lib/apk/db/installed && \
+    sed -i 's/so:libOpenEXRCore-3_3\.so\.31=3\.4\.2/so:libOpenEXRCore-3_3.so.31=3.4.3/g' /lib/apk/db/installed
 
 COPY ./bin ./bin
 COPY ./app ./app
