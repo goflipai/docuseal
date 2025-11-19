@@ -201,7 +201,7 @@ COPY --from=webpack /app/public/packs ./public/packs
 RUN ln -s /fonts /app/public/fonts
 RUN bundle exec bootsnap precompile --gemfile app/ lib/
 
-RUN mkdir -p /data/docuseal && chown -R docuseal:docuseal /app /fonts /data/docuseal
+RUN mkdir -p /data/docuseal && chown -R docuseal:docuseal /app /fonts /data/docuseal && chmod -R 777 /data/docuseal
 USER docuseal
 WORKDIR /data/docuseal
 ENV WORKDIR=/data/docuseal
