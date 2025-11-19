@@ -17,6 +17,9 @@ locals {
   cluster_name           = data.terraform_remote_state.eks.outputs.cluster_name
   docuseal_svc_acct_name = "flip-docuseal-sa"
 
+  cache_host              = "flip-redis.apps.svc.cluster.local"
+  redis_login_secret_name = "${local.env}-flip-redis-login"
+
   repo_name = "docuseal"
   image_ids = reverse(
     sort(

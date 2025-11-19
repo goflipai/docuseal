@@ -65,15 +65,17 @@ module "docuseal" {
     "timeout"    = 180
     "values" = [
       templatefile("./values/docuseal.yaml", {
-        repo_url             = local.repo_url # This tells the k8s deployment object that is created by the helm chart where to pull the container image from
-        repo_name            = local.repo_name
-        image_tag            = local.latest_image
-        secret_base_key_ref  = "${local.env}-flip-docuseal-cipher-key"
-        db_user_ref          = local.db_user_secret_name
-        service_account_name = local.docuseal_svc_acct_name
-        role_arn             = module.backend_pod_identity.iam_role_arn
-        host_name            = local.docuseal_domain
-        ingressSecGrpId      = local.lb_sec_grp_id
+        repo_url                = local.repo_url # This tells the k8s deployment object that is created by the helm chart where to pull the container image from
+        repo_name               = local.repo_name
+        image_tag               = local.latest_image
+        secret_base_key_ref     = "${local.env}-flip-docuseal-cipher-key"
+        db_user_ref             = local.db_user_secret_name
+        service_account_name    = local.docuseal_svc_acct_name
+        role_arn                = module.backend_pod_identity.iam_role_arn
+        host_name               = local.docuseal_domain
+        ingressSecGrpId         = local.lb_sec_grp_id
+        cache_host              = local.cache_host
+        redis_login_secret_name = local.redis_login_secret_name
       })
     ]
   }

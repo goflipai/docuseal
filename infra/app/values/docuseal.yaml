@@ -12,6 +12,10 @@ env_vars:
     value: 3000
   - name: S3_ATTACHMENTS_BUCKET
     value: dev-docuseal
+  - name: REDIS_HOST
+    value: ${cache_host}
+  - name: REDIS_PORT
+    value: 6379
 
 secrets:
   textSecrets:
@@ -20,6 +24,12 @@ secrets:
     db_user:
       env_prefix: DATABASE
       secretRef: ${db_user_ref}
+  userLogins:
+    redis_user:
+      secretRef: ${redis_login_secret_name}
+      varNames:
+        username: REDIS_USERNAME
+        password: REDIS_PASSWORD
   customSecrets:
     - name: AWS_ACCESS_KEY_ID
       valueFrom:
